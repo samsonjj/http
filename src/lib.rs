@@ -1,34 +1,73 @@
 use std::net::{TcpListener, TcpStream};
+use std::thread;
 
-mod request;
-mod parser;
+pub mod parser;
+pub mod request;
+pub mod stream;
 
-use request::HttpStream;
+use stream::HttpStream;
+use request::{HttpRequest, HttpResponse, HttpStatusCode};
 
-pub fn handle_client(stream: TcpStream) {
-    let mut stream = HttpStream::new(stream);
-
-    let request = stream.read_http().unwrap();
-
-    stream.write(b"HTTP/1.1 200 OK\r\n\r\n");
-
-    println!("method: {}", request.method.as_str());
-    println!("headers: {:?}", request.headers);
-    if let Some(data) = request.body {
-        println!("body: {:?}", String::from_utf8_lossy(&data));
-    } else {
-        println!("body: <none>");
-    }
+pub struct HttpServer {
+    listening: bool,
+    handler: fn(HttpRequest) -> HttpResponse,
 }
 
-pub fn listen(port: i32) -> std::io::Result<()> {
-    let listener = TcpListener::bind(format!("127.0.0.1:{}", port))?;
+use std::collections::HashMap;
 
-    // accept connections
-    for stream in listener.incoming() {
-        handle_client(stream.unwrap());
+impl HttpServer {
+    pub fn new() -> Self {
+        Self {
+            listening: false,
+            handler: HttpServer::default_handler,
+        }
     }
-    Ok(())
+
+    pub fn set_handler(&mut self, handler: fn(HttpRequest) -> HttpResponse) {
+        self.handler = handler;
+    }
+
+    fn default_handler(req: HttpRequest) -> HttpResponse {
+        let mut headers = HashMap::new();
+        let body_bytes = b"<h1>Hello, World!</h1>";
+        let len = body_bytes.len();
+        headers.insert("content-length".to_string(), len.to_string());
+
+        return HttpResponse {
+            status_code: HttpStatusCode(200),
+            http_version: "HTTP/1.1".to_string(),
+            headers,
+            body: Some(body_bytes.to_vec())
+        }
+    }
+
+    fn handler(stream: TcpStream, handler: fn(HttpRequest) -> HttpResponse) -> std::io::Result<()> {
+        let mut stream: HttpStream<TcpStream> = HttpStream::new(stream);
+
+        let request = stream.read_http().unwrap();
+        let response = handler(request);
+
+        stream.write(String::from(response).as_bytes());
+        Ok(())
+    }
+
+    pub fn listen(&mut self, port: usize) -> Result<(), ()> {
+        if self.listening { return Err(()); }
+
+        let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).unwrap();
+
+        let f = Self::handler;
+        let f2 = self.handler;
+
+        // accept connections
+        for stream in listener.incoming() {
+            println!("handing off");
+            thread::spawn(move || { f(stream.unwrap(), f2); });
+        }
+
+        self.listening = true;
+        Ok(())
+    }
 }
 
 /// tests: test using threads, so that we can send network requests while listening for network

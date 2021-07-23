@@ -2,7 +2,7 @@ use std::io::{BufRead};
 use std::collections::HashMap;
 use std::convert::{TryInto};
 
-use crate::request::{Request, HttpMethod};
+use crate::request::{HttpRequest, HttpMethod};
 use crate::request;
 
 const N: u8 = '\n' as u8;
@@ -17,7 +17,7 @@ impl<T: BufRead> HttpParser<T> {
     /// Gets a new HttpParser.
     pub fn new(reader: T) -> Self { HttpParser{ reader } }
 
-    pub fn parse_http_request(&mut self) -> Request {
+    pub fn parse_http_request(&mut self) -> HttpRequest {
         let mut request = self.parse_request_head();
         if request::BODIED_METHODS.contains(&request.method) {
             self.parse_request_body(&mut request).unwrap();
@@ -27,7 +27,7 @@ impl<T: BufRead> HttpParser<T> {
     }
 
     /// private: Read and parse the head of an HTTP request from a BufReader.
-    fn parse_request_head(&mut self) -> Request {
+    fn parse_request_head(&mut self) -> HttpRequest {
         let mut vec: Vec<u8> = vec![];
 
         // Parse the Request-Line
@@ -59,7 +59,7 @@ impl<T: BufRead> HttpParser<T> {
             vec.clear()
         }
 
-        Request {
+        HttpRequest {
             method,
             uri,
             http_version,
@@ -70,7 +70,7 @@ impl<T: BufRead> HttpParser<T> {
 
     /// private: Read and parse an HTTP body from the BufReader and attach it to request.
     /// The request must already have headers, so that we can grab the content-length.
-    fn parse_request_body(&mut self, request: &mut Request) -> std::io::Result<()> {
+    fn parse_request_body(&mut self, request: &mut HttpRequest) -> std::io::Result<()> {
         let content_length: usize = request.headers.get("content-length").unwrap().parse().unwrap();
 
         let mut data: Vec<u8> = vec![0u8; content_length];
@@ -86,10 +86,10 @@ mod tests {
     use super::*;
 
     const SIMPLE_REQUEST_STR: &str = "GET / HTTP/1.1\r\nAccept: */*\r\n\r\n";
-    fn get_simple_request() -> Request {
+    fn get_simple_request() -> HttpRequest {
         let mut ex_headers = HashMap::new();
         ex_headers.insert("accept".to_string(), "*/*".to_string());
-        Request {
+        HttpRequest {
             method: HttpMethod::GET,
             uri: "/".to_string(),
             http_version: "HTTP/1.1".to_string(),
