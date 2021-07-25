@@ -1,26 +1,22 @@
 use http::{HttpServer};
-use http::request::{HttpResponse, HttpStatusCode};
-use std::collections::HashMap;
+use http::request::{HttpResponse, HttpStatusCode, HttpHeaders, HttpVersion};
 
 fn main() -> std::io::Result<()> {
 
     let mut server = HttpServer::new();
 
-    server.set_handler(move |req| {
-        let mut headers = HashMap::new();
+    server.request_handler = move |_req| {
         let body_bytes = b"<h1>Big boy time</h1>";
-        let len = body_bytes.len();
-        headers.insert("content-length".to_string(), len.to_string());
 
-        HttpResponse {
-            status_code: HttpStatusCode(200),
-            http_version: "HTTP/1.1".to_string(),
-            headers,
-            body: Some(body_bytes.to_vec())
-        }
-    });
+        HttpResponse::new(
+            HttpVersion::default(),
+            HttpStatusCode(200),
+            HttpHeaders::default(),
+            Some(body_bytes.to_vec())
+        )
+    };
 
-    server.listen(8080);
+    server.listen(8080).unwrap();
 
     Ok(())
 }
