@@ -13,7 +13,7 @@ mod method {
         HttpMethod::PATCH,
     ];
 
-    /// HTTP Methods as defined in at [https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html]
+    /// HTTP Methods as defined in at <https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html>
     #[allow(dead_code)]
     #[derive(Debug, Clone, PartialEq)]
     pub enum HttpMethod {
@@ -287,11 +287,11 @@ mod response {
                 .collect();
 
             let body_str: String = match res.get_body() {
-                Some(data) => format!("\r\n{}", String::from_utf8_lossy(&data)),
+                Some(body ) => String::from_utf8_lossy(&body).to_string(),
                 None => "".to_string()
             };
 
-            format!("{} {} {}\r\n{}\r\n{}",
+            format!("{} {} {}\r\n{}\r\n\r\n{}",
                     res.http_version.0.as_str(),
                     res.status_code.0.to_string(),
                     res.status_code.description(),
