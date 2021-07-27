@@ -1,6 +1,7 @@
 use std::io::{BufRead};
 use std::collections::HashMap;
 use std::convert::{TryInto};
+use std::path::PathBuf;
 
 use crate::request::{HttpRequest, HttpMethod};
 use crate::request;
@@ -35,7 +36,11 @@ impl<T: BufRead> HttpParser<T> {
         let string = String::from_utf8_lossy(&vec);
         let mut split = string.split(" ");
         let method: HttpMethod = split.next().unwrap().trim().try_into().unwrap();
-        let uri = split.next().unwrap().trim().to_string();
+        let mut uri = split.next().unwrap().trim().to_string();
+        if !uri.starts_with("/") {
+            uri = format!("/{}", uri);
+        }
+        let uri = PathBuf::from(uri);
         let http_version = split.next().unwrap().trim().to_string();
 
         vec.clear();
@@ -91,7 +96,7 @@ mod tests {
         ex_headers.insert("accept".to_string(), "*/*".to_string());
         HttpRequest {
             method: HttpMethod::GET,
-            uri: "/".to_string(),
+            uri: PathBuf::from("/"),
             http_version: "HTTP/1.1".to_string(),
             headers: ex_headers,
             body: None

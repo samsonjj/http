@@ -3,11 +3,14 @@ use std::thread;
 
 use crate::request::{HttpRequest, HttpResponse, HttpVersion, HttpStatusCode, HttpHeaders};
 use crate::stream::HttpStream;
+use std::sync::Arc;
+
+type RequestHandler = dyn Fn(HttpRequest) -> HttpResponse + Send + Sync;
 
 pub struct HttpServer {
     listening: bool,
     pub multi_threaded: bool,
-    pub request_handler: fn(HttpRequest) -> HttpResponse,
+    pub request_handler: Arc<RequestHandler>,
 }
 
 impl HttpServer {
@@ -15,7 +18,7 @@ impl HttpServer {
         Self {
             listening: false,
             multi_threaded: true,
-            request_handler: Self::default_request_handler,
+            request_handler: Arc::new(Self::default_request_handler),
         }
     }
 
@@ -30,7 +33,7 @@ impl HttpServer {
         )
     }
 
-    fn connection_handler(stream: TcpStream, handler: fn(HttpRequest) -> HttpResponse) -> std::io::Result<()> {
+    fn connection_handler(stream: TcpStream, handler: Arc<RequestHandler>) -> std::io::Result<()> {
         let mut stream: HttpStream<TcpStream> = HttpStream::new(stream);
 
         let request = stream.read_http().unwrap();
@@ -45,19 +48,17 @@ impl HttpServer {
         if self.listening { return Err(()); }
         self.listening = true;
 
-        // let connection_handler = Self::connection_handler;
-        let request_handler = self.request_handler;
-
         // accept connections on infinite loop
         let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).unwrap();
 
         for stream in listener.incoming() {
+            let f = self.request_handler.clone();
             if self.multi_threaded {
                 thread::spawn(move || {
-                    Self::connection_handler(stream.unwrap(), request_handler).unwrap();
+                    Self::connection_handler(stream.unwrap(), f.clone()).unwrap();
                 });
             } else {
-                Self::connection_handler(stream.unwrap(), request_handler).unwrap();
+                Self::connection_handler(stream.unwrap(), f).unwrap();
             }
         }
 

@@ -91,7 +91,7 @@ mod status {
                 401 => "Unauthorized",
                 402 => "Payment Required",
                 403 => "Forbidden",
-                404 => "Status Not Implemented",
+                404 => "Not Found",
                 405 => "Status Not Implemented",
                 406 => "Status Not Implemented",
                 407 => "Status Not Implemented",
@@ -144,6 +144,7 @@ mod status {
 mod request {
     use super::HttpMethod;
     use std::collections::HashMap;
+    use std::path::PathBuf;
 
     /// An HTTP request struct. Most operations on this struct are read-only,
     /// an instance of this struct will be read in from an HttpStream and used
@@ -151,7 +152,7 @@ mod request {
     #[derive(Debug, Clone, PartialEq)]
     pub struct HttpRequest {
         pub method: HttpMethod,
-        pub uri: String,
+        pub uri: PathBuf,
         pub http_version: String,
         pub headers: HashMap<String, String>,
         pub body: Option<Vec<u8>>,
@@ -171,7 +172,7 @@ mod request {
 
             format!("{} {} {}\r\n{}\r\n{}",
                     req.method.as_str(),
-                    req.uri,
+                    req.uri.to_str().unwrap(),
                     req.http_version,
                     header_list.join("\r\n"),
                     body_str
@@ -302,10 +303,10 @@ mod response {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn string_from_request() {
@@ -316,8 +317,8 @@ mod tests {
 
         let request = HttpRequest {
             method: HttpMethod::GET,
-            uri: "/logo.gif".to_string(),
-            http_version: "HTTP/1.1".to_string(),
+            uri: PathBuf::from("/logo.gif"),
+            http_version: String::from("HTTP/1.1"),
             headers,
             body: Some("Hello, World!".into())
         };

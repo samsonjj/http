@@ -36,6 +36,7 @@ mod tests {
     use super::*;
     use crate::request::{HttpMethod};
     use std::collections::HashMap;
+    use std::path::PathBuf;
 
     use std::cmp::min;
 
@@ -77,7 +78,7 @@ mod tests {
         ex_headers.insert("accept".to_string(), "*/*".to_string());
         HttpRequest {
             method: HttpMethod::GET,
-            uri: "/".to_string(),
+            uri: PathBuf::from("/"),
             http_version: "HTTP/1.1".to_string(),
             headers: ex_headers,
             body: None
@@ -91,7 +92,7 @@ mod tests {
         ex_headers.insert("content-length".to_string(), "14".to_string());
         HttpRequest {
             method: HttpMethod::POST,
-            uri: "/".to_string(),
+            uri: PathBuf::from("/"),
             http_version: "HTTP/1.1".to_string(),
             headers: ex_headers,
             body: Some(Vec::from("This is a body".as_bytes()))
